@@ -1,7 +1,31 @@
 # functions common among cars
 import numpy as np
 from dataclasses import dataclass, field
-from enum import IntFlag, ReprEnum, StrEnum, EnumType, auto
+# Changes for Python 3.10 compatibility: Define necessary Enum related classes
+from enum import IntFlag, auto, Enum, EnumMeta
+
+# Define ReprEnum ourselves since it's not in Python 3.10
+try:
+    from enum import ReprEnum
+except ImportError:
+    class ReprEnum(Enum):
+        def __repr__(self):
+            return f"{self.__class__.__name__}.{self.name}"
+
+# Define StrEnum ourselves since it's not in Python 3.10
+try:
+    from enum import StrEnum
+except ImportError:
+    class StrEnum(str, Enum):
+        def __str__(self):
+            return self.value
+
+# Use EnumMeta instead of EnumType since EnumType is not in Python 3.10
+try:
+    from enum import EnumType
+except ImportError:
+    EnumType = EnumMeta
+
 from dataclasses import replace
 
 from opendbc.car import structs, uds
@@ -328,11 +352,11 @@ class ExtraPlatformConfig(PlatformConfigBase):
 
 class PlatformsType(EnumType):
   def __new__(metacls, cls, bases, classdict, *, boundary=None, _simple=False, **kwds):
-    for key in classdict._member_names.keys():
+    for key in classdict._member_names:
       cfg: PlatformConfig = classdict[key]
       cfg.platform_str = key
       cfg.freeze()
-    return super().__new__(metacls, cls, bases, classdict, boundary=boundary, _simple=_simple, **kwds)
+    return super().__new__(metacls, cls, bases, classdict)
 
 
 class Platforms(str, ReprEnum, metaclass=PlatformsType):
@@ -353,4 +377,5 @@ class Platforms(str, ReprEnum, metaclass=PlatformsType):
 
   @classmethod
   def with_flags(cls, flags: IntFlag) -> set['Platforms']:
+    return {p for p in cls if p.config.flags & flags}
     return {p for p in cls if p.config.flags & flags}
